@@ -32,7 +32,7 @@ Each `instance` value selects a different Durable Object and container.
 
 ## What changed
 
-- `exports.Sandbox.container` opts the Durable Object namespace into the Instance Group model.
+- `exports.<Class_Name>.container` opts the Durable Object namespace into the Instance Group model.
 - `images` tells Wrangler to build, push, prepare, and inject a digest-pinned `SANDBOX_IMAGE` binding.
 - Wrangler resolves the deployed namespace and configures it in Coordinator without creating an ApplicationsV3 application.
-- The Durable Object uses the injected image with `ctx.container.start()` and proxies requests to the container.
+- Until [workerd PR #6992](https://github.com/cloudflare/workerd/pull/6992) reaches production Edgeworker, the Durable Object passes the injected image and instance type through temporary container environment variables.

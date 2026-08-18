@@ -45,11 +45,16 @@ export class Sandbox extends DurableObject<Env> {
 
     if (!this.container.running) {
       const options: ContainerStartupOptions = {
-        image: this.env.SANDBOX_IMAGE,
-        instance: "lite",
+        // Restore these fields and remove the matching temporary environment
+        // variables after https://github.com/cloudflare/workerd/pull/6992 is
+        // released to production Edgeworker.
+        // image: this.env.SANDBOX_IMAGE,
+        // instance: "lite",
         entrypoint: ["/usr/local/bin/python", "-u", "/app/server.py"],
         enableInternet: false,
         env: {
+          CLOUDFLARE_EXPERIMENTAL_CUSTOM_IMAGE: this.env.SANDBOX_IMAGE,
+          CLOUDFLARE_EXPERIMENTAL_INSTANCE_TYPE: "lite",
           DURABLE_OBJECT_ID: this.ctx.id.toString(),
           PATH: "/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin",
         },
