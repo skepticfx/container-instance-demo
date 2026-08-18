@@ -1,0 +1,33 @@
+{
+  "name": "container-instance-demo",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["experimental"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SANDBOX",
+        "class_name": "Sandbox"
+      }
+    ]
+  },
+  "exports": {
+    "Sandbox": {
+      "type": "durable-object",
+      "storage": "sqlite",
+      "container": {
+        "name": "sandboxes",
+        "images": [
+          {
+            "binding": "SANDBOX_IMAGE",
+            "image": "./container/Dockerfile"
+          }
+        ]
+      }
+    }
+  },
+  "observability": {
+    "enabled": true
+    // "head_sampling_rate": 1
+  }
+}
