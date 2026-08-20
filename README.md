@@ -9,6 +9,11 @@ A minimal Worker whose Durable Objects start namespace-backed containers on dema
 
 ## Deploy
 
+```bash
+npm install
+```
+
+
 Authenticate, then deploy with the Wrangler PR build:
 
 ```bash
