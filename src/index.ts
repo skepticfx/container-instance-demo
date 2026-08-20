@@ -1,13 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
+import pRetry from "p-retry";
 
 const CONTAINER_PORT = 8080;
-const STARTUP_TIMEOUT_MS = 30_000;
-const RETRY_INTERVAL_MS = 250;
+const STARTUP_RETRIES = 5;
+const STARTUP_RETRY_DELAY_MS = 500;
 const INACTIVITY_TIMEOUT_MS = 60_000;
 
 export class Sandbox extends DurableObject<Env> {
-  private containerMonitor?: Promise<void>;
-
   private get container(): Container {
     if (this.ctx.container === undefined) {
       throw new Error("Sandbox was started without a Container attachment.");
@@ -15,25 +14,19 @@ export class Sandbox extends DurableObject<Env> {
     return this.ctx.container;
   }
 
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
-    if (this.container.running) {
-      this.startMonitor();
-    }
-  }
-
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+    const container = this.container;
 
     if (url.pathname === "/_status") {
-      return Response.json({ running: this.container.running });
+      return Response.json({ running: container.running });
     }
 
     if (url.pathname === "/_destroy") {
-      if (this.container.running) {
-        await this.container.destroy();
+      if (container.running) {
+        await container.destroy();
       }
-      return Response.json({ running: this.container.running });
+      return Response.json({ running: container.running });
     }
 
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -43,73 +36,74 @@ export class Sandbox extends DurableObject<Env> {
       });
     }
 
-    if (!this.container.running) {
+    const abortController = new AbortController();
+    if (!container.running) {
       const options: ContainerStartupOptions = {
         // Restore these fields and remove the matching temporary environment
         // variables after https://github.com/cloudflare/workerd/pull/6992 is
         // released to production Edgeworker.
         // image: this.env.SANDBOX_IMAGE,
         // instance: "lite",
-        entrypoint: ["/usr/local/bin/python", "-u", "/app/server.py"],
+        entrypoint: ["/server", "8080"],
         enableInternet: false,
         env: {
+          NAME: "container-instance-demo",
+          MESSAGE: "hello from a bottom-up Container Instance",
+          DURABLE_OBJECT_ID: this.ctx.id.toString(),
           CLOUDFLARE_EXPERIMENTAL_CUSTOM_IMAGE: this.env.SANDBOX_IMAGE,
           CLOUDFLARE_EXPERIMENTAL_INSTANCE_TYPE: "lite",
-          DURABLE_OBJECT_ID: this.ctx.id.toString(),
-          PATH: "/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin",
         },
       };
-      this.container.start(options);
-      void this.container.setInactivityTimeout(INACTIVITY_TIMEOUT_MS).catch(
+      container.start(options);
+      void container.monitor().then(
+        () => {
+          abortController.abort(
+            new Error("Container exited before the server became ready.")
+          );
+        },
         (error) => {
-          console.error("Failed to set container inactivity timeout.", error);
+          abortController.abort(
+            error instanceof Error ? error : new Error(String(error))
+          );
         }
       );
-      this.startMonitor();
     }
 
-    return await this.fetchContainerWhenReady(request);
-  }
-
-  private startMonitor(): void {
-    const monitor = this.container.monitor();
-    this.containerMonitor = monitor;
-    void monitor
-      .catch((error) => {
-        console.error("Container stopped.", error);
-      })
-      .finally(() => {
-        if (this.containerMonitor === monitor) {
-          this.containerMonitor = undefined;
-        }
-      });
-  }
-
-  private async fetchContainerWhenReady(request: Request): Promise<Response> {
-    const deadline = Date.now() + STARTUP_TIMEOUT_MS;
-    const containerUrl = new URL(request.url);
-    containerUrl.protocol = "http:";
-    const containerRequest = new Request(containerUrl, request);
-    let lastError = "container port is not ready";
-
-    while (Date.now() < deadline) {
-      try {
-        return await this.container
-          .getTcpPort(CONTAINER_PORT)
-          .fetch(containerRequest);
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : String(error);
-        await new Promise((resolve) => setTimeout(resolve, RETRY_INTERVAL_MS));
-      }
-    }
-
-    return Response.json(
-      {
-        error: "container did not become ready",
-        detail: lastError,
-      },
-      { status: 503 }
+    await container.setInactivityTimeout(INACTIVITY_TIMEOUT_MS);
+    return await this.fetchContainerWhenReady(
+      request,
+      container,
+      abortController.signal
     );
+  }
+
+  private async fetchContainerWhenReady(
+    request: Request,
+    container: Container,
+    signal: AbortSignal
+  ): Promise<Response> {
+    try {
+      return await pRetry(
+        async () => {
+          return await container
+            .getTcpPort(CONTAINER_PORT)
+            .fetch(request.url.replace("https://", "http://"), request);
+        },
+        {
+          retries: STARTUP_RETRIES,
+          minTimeout: STARTUP_RETRY_DELAY_MS,
+          signal,
+        }
+      );
+    } catch (error) {
+      return Response.json(
+        {
+          error: "container did not become ready",
+          detail: error instanceof Error ? error.message : String(error),
+        },
+        { status: 503 }
+      );
+    }
   }
 }
 

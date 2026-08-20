@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      p-retry:
+        specifier: ^8.0.0
+        version: 8.0.0
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 5.20260811.1
@@ -20,6 +24,14 @@ packages:
   '@cloudflare/workers-types@5.20260811.1':
     resolution: {integrity: sha512-jS3o9240P8t7Y/2lecXPC0rGdODZgHyFTWy9Asdm8htE2Uepx4PAvbcVo3EC0r8wZuv6rahDc1MMj+3nDZj/QA==}
 
+  is-network-error@1.3.2:
+    resolution: {integrity: sha512-PhBY86zaxNZUuWP6h13Vu5oFe0XY6/UlKzQnYFELzGVHygP3MxmvTfYSG7GN3aIab/iWudSMgjSnG9Dq+nHrgA==}
+    engines: {node: '>=16'}
+
+  p-retry@8.0.0:
+    resolution: {integrity: sha512-kFVqH1HxOHp8LupNsOys7bSV09VYTRLxarH/mokO4Rqhk6wGi70E0jh4VzvVGXfEVNggHoHLAMWsQqHyU1Ey9A==}
+    engines: {node: '>=22'}
+
   typescript@5.8.3:
     resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
     engines: {node: '>=14.17'}
@@ -28,5 +40,11 @@ packages:
 snapshots:
 
   '@cloudflare/workers-types@5.20260811.1': {}
+
+  is-network-error@1.3.2: {}
+
+  p-retry@8.0.0:
+    dependencies:
+      is-network-error: 1.3.2
 
   typescript@5.8.3: {}

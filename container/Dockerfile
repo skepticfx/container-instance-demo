@@ -1,9 +1,15 @@
-FROM python:3.13-alpine
+# syntax=docker/dockerfile:1
+
+FROM golang:1.24-alpine AS build
 
 WORKDIR /app
-COPY --chown=nobody:nobody server.py /app/server.py
+COPY go.mod ./
+RUN go mod download
+COPY main.go ./
+RUN CGO_ENABLED=0 GOOS=linux go build -tags osusergo,netgo -o /server
 
-USER nobody
+FROM alpine
+COPY --from=build /server /server
 EXPOSE 8080
 
-CMD ["python", "-u", "/app/server.py"]
+CMD ["/server", "8080"]

@@ -19,6 +19,11 @@
           {
             "binding": "SANDBOX_IMAGE",
             "image": "./container/Dockerfile"
+          },
+          // you can have multiple images in the same container, that you can start based on use-cases 
+          {
+            "binding": "SANDBOX_IMAGE_EXTRA",
+            "image": "./container/Dockerfile"
           }
         ]
       }
@@ -26,6 +31,5 @@
   },
   "observability": {
     "enabled": true
-    // "head_sampling_rate": 1
   }
 }
