@@ -1,0 +1,27 @@
+container/Dockerfile
+  s_652efe2de01d4b::t_73ca4fdf4f006b 1-3,6-9,11-12,15
+container/go.mod
+  s_652efe2de01d4b::t_e372de524d6dfa 1-3
+container/main.go
+  s_652efe2de01d4b::t_02bf93f3ce1fde 1-73
+package.json
+  s_652efe2de01d4b::t_bd40408cfd6d91 16-18
+pnpm-lock.yaml
+  s_652efe2de01d4b::t_9750c4e3cd4b1f 10-13,27-34,44-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dd0b63ccb12aced6ad0c21b0f67391cbe00eb504",
+  "prompts": {},
+  "sessions": {
+    "s_652efe2de01d4b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02016-f9cb-7853-9fb9-01b5e032a995",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "skepticfx <ahamed.nafeez@gmail.com>"
+    }
+  }
+}
