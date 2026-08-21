@@ -5,6 +5,31 @@ const CONTAINER_PORT = 8080;
 const STARTUP_RETRIES = 5;
 const STARTUP_RETRY_DELAY_MS = 500;
 const INACTIVITY_TIMEOUT_MS = 60_000;
+const EXEC_READY_RETRIES = 20;
+const EXEC_READY_DELAY_MS = 300;
+const SNAPSHOT_STORAGE_KEY = "latest-container-snapshot";
+
+class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+interface WriteFileRequest {
+  path: string;
+  contents: string;
+}
+
+interface SnapshotRequest {
+  name?: string;
+}
+
+interface RestoreRequest {
+  snapshot?: ContainerSnapshot;
+}
 
 export class Sandbox extends DurableObject<Env> {
   private get container(): Container {
@@ -29,6 +54,22 @@ export class Sandbox extends DurableObject<Env> {
       return Response.json({ running: container.running });
     }
 
+    if (request.method === "POST" && url.pathname === "/_write_file") {
+      return await this.handleControlRequest(() => this.handleWriteFile(request));
+    }
+
+    if (request.method === "GET" && url.pathname === "/_read_file") {
+      return await this.handleControlRequest(() => this.handleReadFile(url));
+    }
+
+    if (request.method === "POST" && url.pathname === "/_snapshot") {
+      return await this.handleControlRequest(() => this.handleSnapshot(request));
+    }
+
+    if (request.method === "POST" && url.pathname === "/_restore") {
+      return await this.handleControlRequest(() => this.handleRestore(request));
+    }
+
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("This demo proxies GET and HEAD requests only.", {
         status: 405,
@@ -38,23 +79,7 @@ export class Sandbox extends DurableObject<Env> {
 
     const abortController = new AbortController();
     if (!container.running) {
-      const options: ContainerStartupOptions = {
-        // Restore these fields and remove the matching temporary environment
-        // variables after https://github.com/cloudflare/workerd/pull/6992 is
-        // released to production Edgeworker.
-        // image: this.env.SANDBOX_IMAGE,
-        // instance: "lite",
-        entrypoint: ["/server", "8080"],
-        enableInternet: false,
-        env: {
-          NAME: "container-instance-demo",
-          MESSAGE: "hello from a bottom-up Container Instance",
-          DURABLE_OBJECT_ID: this.ctx.id.toString(),
-          CLOUDFLARE_EXPERIMENTAL_CUSTOM_IMAGE: this.env.SANDBOX_IMAGE,
-          CLOUDFLARE_EXPERIMENTAL_INSTANCE_TYPE: "lite",
-        },
-      };
-      container.start(options);
+      container.start(this.containerStartOptions());
       void container.monitor().then(
         () => {
           abortController.abort(
@@ -75,6 +100,199 @@ export class Sandbox extends DurableObject<Env> {
       container,
       abortController.signal
     );
+  }
+
+  // Every code path starts the container through these options. `snapshot` is
+  // only supplied when restoring a previously captured container snapshot.
+  private containerStartOptions(
+    snapshot?: ContainerSnapshot
+  ): ContainerStartupOptions {
+    return {
+      // Restore these fields and remove the matching temporary environment
+      // variables after https://github.com/cloudflare/workerd/pull/6992 is
+      // released to production Edgeworker.
+      // image: this.env.SANDBOX_IMAGE,
+      // instance: "lite",
+      entrypoint: ["/server", "8080"],
+      enableInternet: false,
+      env: {
+        NAME: "container-instance-demo",
+        MESSAGE: "hello from a bottom-up Container Instance",
+        DURABLE_OBJECT_ID: this.ctx.id.toString(),
+        // A container snapshot already identifies the image, and the two are
+        // mutually exclusive, so only send the image when starting from it.
+        ...(snapshot === undefined
+          ? { CLOUDFLARE_EXPERIMENTAL_CUSTOM_IMAGE: this.env.SANDBOX_IMAGE }
+          : {}),
+        CLOUDFLARE_EXPERIMENTAL_INSTANCE_TYPE: "lite",
+      },
+      ...(snapshot === undefined ? {} : { containerSnapshot: snapshot }),
+    };
+  }
+
+  private async ensureContainerReady(
+    snapshot?: ContainerSnapshot
+  ): Promise<void> {
+    if (this.container.running) {
+      // A snapshot can only be restored at startup, so refuse rather than
+      // silently ignoring it.
+      if (snapshot !== undefined) {
+        throw new Error("cannot restore a snapshot into a running container");
+      }
+    } else {
+      this.container.start(this.containerStartOptions(snapshot));
+    }
+
+    // `running` only means start() was called, not that the container accepts
+    // exec yet, so always probe before issuing the real command.
+    await pRetry(
+      async () => {
+        const process = await this.container.exec(["/bin/sh", "-c", "true"], {
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        await process.output();
+      },
+      {
+        retries: EXEC_READY_RETRIES,
+        minTimeout: EXEC_READY_DELAY_MS,
+        // Fixed interval. The exponential default would wait ~5 minutes.
+        factor: 1,
+      }
+    );
+  }
+
+  private async handleControlRequest(
+    handler: () => Promise<Response>
+  ): Promise<Response> {
+    try {
+      return await handler();
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return Response.json({ error: error.message }, { status: error.status });
+      }
+
+      const detail = error instanceof Error ? error.message : String(error);
+      console.error("Container control request failed.", error);
+      return Response.json(
+        { error: "container control request failed", detail },
+        { status: 500 }
+      );
+    }
+  }
+
+  // Commands take the path and contents as positional arguments ($1, $2) so
+  // neither can be interpreted as shell syntax.
+  private async exec(script: string, ...args: string[]) {
+    const process = await this.container.exec(
+      ["/bin/sh", "-c", script, "sh", ...args],
+      { stdout: "pipe", stderr: "pipe" }
+    );
+    const output = await process.output();
+
+    return {
+      stdout: new TextDecoder().decode(output.stdout),
+      stderr: new TextDecoder().decode(output.stderr),
+      exitCode: output.exitCode,
+    };
+  }
+
+  private async handleWriteFile(request: Request): Promise<Response> {
+    const input = await this.readJson<WriteFileRequest>(request);
+    if (typeof input.path !== "string" || !input.path.startsWith("/")) {
+      throw new HttpError(400, "path must be an absolute path");
+    }
+    if (typeof input.contents !== "string") {
+      throw new HttpError(400, "contents must be a string");
+    }
+
+    await this.ensureContainerReady();
+
+    // base64 keeps arbitrary contents (newlines, quotes, UTF-8) intact.
+    const bytes = new TextEncoder().encode(input.contents);
+    const encoded = btoa(
+      Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")
+    );
+    const result = await this.exec(
+      'mkdir -p "$(dirname "$1")" && printf %s "$2" | base64 -d > "$1"',
+      input.path,
+      encoded
+    );
+    if (result.exitCode !== 0) {
+      throw new HttpError(500, `failed to write file: ${result.stderr.trim()}`);
+    }
+
+    return Response.json({
+      path: input.path,
+      bytesWritten: bytes.length,
+    });
+  }
+
+  private async handleReadFile(url: URL): Promise<Response> {
+    const path = url.searchParams.get("path");
+    if (path === null || !path.startsWith("/")) {
+      throw new HttpError(400, "path must be an absolute path");
+    }
+
+    await this.ensureContainerReady();
+    const result = await this.exec('cat "$1"', path);
+    if (result.exitCode !== 0) {
+      throw new HttpError(404, `failed to read file: ${result.stderr.trim()}`);
+    }
+
+    return Response.json({ path, contents: result.stdout });
+  }
+
+  private async handleSnapshot(request: Request): Promise<Response> {
+    const input = await this.readJson<SnapshotRequest>(request);
+
+    await this.ensureContainerReady();
+    const snapshot = await this.container.snapshotContainer({
+      name: input.name,
+    });
+    await this.ctx.storage.put(SNAPSHOT_STORAGE_KEY, snapshot);
+
+    return Response.json(snapshot);
+  }
+
+  private async handleRestore(request: Request): Promise<Response> {
+    const input = await this.readJson<RestoreRequest>(request);
+    const snapshot =
+      input.snapshot ??
+      (await this.ctx.storage.get<ContainerSnapshot>(SNAPSHOT_STORAGE_KEY));
+    if (snapshot === undefined) {
+      throw new HttpError(404, "no container snapshot is available");
+    }
+
+    // Replacing the container is a multi-step operation. Block other events so
+    // a concurrent request cannot observe or race the destroy/start window.
+    await this.ctx.blockConcurrencyWhile(async () => {
+      if (this.container.running) {
+        await this.container.destroy();
+      }
+      await this.ensureContainerReady(snapshot);
+    });
+
+    return Response.json({ restored: true, snapshot });
+  }
+
+  private async readJson<T>(request: Request): Promise<T> {
+    if (request.headers.get("content-length") === "0") {
+      return {} as T;
+    }
+
+    let value: unknown;
+    try {
+      value = await request.json();
+    } catch {
+      throw new HttpError(400, "request body must be valid JSON");
+    }
+
+    if (value === null || typeof value !== "object") {
+      throw new HttpError(400, "request body must be a JSON object");
+    }
+
+    return value as T;
   }
 
   private async fetchContainerWhenReady(
