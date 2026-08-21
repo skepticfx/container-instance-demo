@@ -35,6 +35,43 @@ curl "https://<worker-url>/_destroy?instance=first"
 
 Each `instance` value selects a different Durable Object and container.
 
+## Container snapshots
+
+Four additional endpoints demonstrate full container snapshots:
+
+- `POST /_write_file` writes `contents` to an absolute `path`, creating parent directories.
+- `GET /_read_file?path=` returns the contents of a file.
+- `POST /_snapshot` captures the whole container with `container.snapshotContainer()` and stores it as the latest snapshot for that Durable Object.
+- `POST /_restore` starts a fresh container from a snapshot, using the stored one unless a `snapshot` is supplied in the body.
+
+Write a file, snapshot the container, destroy it, then restore:
+
+```bash
+BASE="https://<worker-url>"
+INSTANCE="snapshot-demo"
+
+curl "$BASE/_write_file?instance=$INSTANCE" \
+  -X POST -H 'Content-Type: application/json' \
+  -d '{"path":"/opt/demo/state.txt","contents":"before-snapshot\n"}'
+
+curl "$BASE/_snapshot?instance=$INSTANCE" \
+  -X POST -H 'Content-Type: application/json' \
+  -d '{"name":"demo-container"}'
+
+curl "$BASE/_destroy?instance=$INSTANCE"
+
+curl "$BASE/_restore?instance=$INSTANCE" \
+  -X POST -H 'Content-Type: application/json' -d '{}'
+
+curl "$BASE/_read_file?instance=$INSTANCE&path=/opt/demo/state.txt"
+```
+
+The last command returns `before-snapshot` from the restored container.
+
+`containerSnapshot` is only passed to `container.start()` when restoring, so the normal startup path is unchanged. A snapshot already identifies the image, so the image is not sent alongside it.
+
+`/_write_file` and `/_read_file` are implemented with `container.exec()`, passing the path and contents as positional shell arguments so neither can be interpreted as shell syntax.
+
 ## What changed
 
 - `exports.<Class_Name>.container` opts the Durable Object namespace into the Instance Group model.
