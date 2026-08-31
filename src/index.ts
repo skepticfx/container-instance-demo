@@ -39,19 +39,14 @@ export class Sandbox extends DurableObject<Env> {
     const abortController = new AbortController();
     if (!container.running) {
       const options: ContainerStartupOptions = {
-        // Restore these fields and remove the matching temporary environment
-        // variables after https://github.com/cloudflare/workerd/pull/6992 is
-        // released to production Edgeworker.
-        // image: this.env.SANDBOX_IMAGE,
-        // instance: "lite",
+        image: this.env.SANDBOX_IMAGE,
+        instance: "lite",
         entrypoint: ["/server", "8080"],
         enableInternet: false,
         env: {
           NAME: "container-instance-demo",
           MESSAGE: "hello from a bottom-up Container Instance",
           DURABLE_OBJECT_ID: this.ctx.id.toString(),
-          CLOUDFLARE_EXPERIMENTAL_CUSTOM_IMAGE: this.env.SANDBOX_IMAGE,
-          CLOUDFLARE_EXPERIMENTAL_INSTANCE_TYPE: "lite",
         },
       };
       container.start(options);
