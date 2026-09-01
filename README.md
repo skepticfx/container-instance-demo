@@ -5,7 +5,7 @@ A minimal Worker whose Durable Objects start namespace-backed containers on dema
 ## Prerequisites
 
 - Node.js and Docker
-- A Cloudflare account with Workers, Containers, and Container Instance Groups enabled
+- A Cloudflare account with Workers, Containers, and the new runtime enabled.
 
 ## Deploy
 
@@ -13,6 +13,7 @@ A minimal Worker whose Durable Objects start namespace-backed containers on dema
 npm install
 ```
 
+Use a custom wrangler based on this PR, until this is upstream: https://github.com/cloudflare/workers-sdk/pull/15141
 
 Authenticate, then deploy with the Wrangler PR build:
 
@@ -39,5 +40,3 @@ Each `instance` value selects a different Durable Object and container.
 
 - `exports.<Class_Name>.container` opts the Durable Object namespace into the Instance Group model.
 - `images` tells Wrangler to build, push, prepare, and inject a digest-pinned `SANDBOX_IMAGE` binding.
-- Wrangler resolves the deployed namespace and configures it in Coordinator without creating an ApplicationsV3 application.
-- Until [workerd PR #6992](https://github.com/cloudflare/workerd/pull/6992) reaches production Edgeworker, the Durable Object passes the injected image and instance type through temporary container environment variables.
