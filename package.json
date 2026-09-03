@@ -4,11 +4,11 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "wrangler": "npx --yes https://pkg.pr.new/wrangler@15141",
-    "types": "npx --yes https://pkg.pr.new/wrangler@15141 types --include-runtime=false",
+    "wrangler": "npx --yes https://pkg.pr.new/wrangler@15480",
+    "types": "npx --yes https://pkg.pr.new/wrangler@15480 types --include-runtime=false",
     "check": "pnpm run types && tsc --noEmit",
-    "deploy:dry": "npx --yes https://pkg.pr.new/wrangler@15141 deploy --dry-run",
-    "deploy": "npx --yes https://pkg.pr.new/wrangler@15141 deploy"
+    "deploy:dry": "npx --yes https://pkg.pr.new/wrangler@15480 deploy --dry-run",
+    "deploy": "npx --yes https://pkg.pr.new/wrangler@15480 deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260811.1",
