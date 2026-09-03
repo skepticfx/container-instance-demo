@@ -10,25 +10,23 @@
       }
     ]
   },
-  "exports": {
-    "Sandbox": {
-      "type": "durable-object",
-      "storage": "sqlite",
-      "container": {
-        "images": [
-          {
-            "binding": "SANDBOX_IMAGE",
-            "image": "./container/Dockerfile"
-          },
-          // you can have multiple images in the same container, that you can start based on use-cases 
-          {
-            "binding": "SANDBOX_IMAGE_EXTRA",
-            "image": "./container/Dockerfile"
-          }
-        ]
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Sandbox"]
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "scheduling_policy": "durable_object",
+      "images": {
+        "app": {
+          "dockerfile": "./container/Dockerfile"
+        }
       }
     }
-  },
+  ],
   "observability": {
     "enabled": true
   }

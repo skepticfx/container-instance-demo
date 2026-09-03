@@ -39,7 +39,8 @@ export class Sandbox extends DurableObject<Env> {
     const abortController = new AbortController();
     if (!container.running) {
       const options: ContainerStartupOptions = {
-        image: this.env.SANDBOX_IMAGE,
+        image:
+          this.env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES.Sandbox.app,
         instance: "lite",
         entrypoint: ["/server", "8080"],
         enableInternet: false,
