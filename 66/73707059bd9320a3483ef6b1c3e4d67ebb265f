@@ -1,0 +1,19 @@
+pnpm-lock.yaml
+  s_23cc57bf2d1f01::t_1f3ebf70e81738 16-17,24-25,42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6673707059bd9320a3483ef6b1c3e4d67ebb265f",
+  "prompts": {},
+  "sessions": {
+    "s_23cc57bf2d1f01": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0722b-2bac-7980-85e3-fd36689799d5",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "skepticfx <ahamed.nafeez@gmail.com>"
+    }
+  }
+}
