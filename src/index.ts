@@ -38,10 +38,7 @@ export class Sandbox extends DurableObject<Env> {
 
     const abortController = new AbortController();
     if (!container.running) {
-      // Prefer native metadata, with a fallback while the runtime rolls out.
-      const image =
-        container.images?.app ??
-        this.env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES?.Sandbox?.app;
+      const image = container.images?.app;
       if (!image) {
         throw new Error(
           "No image is available for Sandbox.app. Deploy this Worker with its Container image configuration."
@@ -57,6 +54,8 @@ export class Sandbox extends DurableObject<Env> {
           NAME: "container-instance-demo",
           MESSAGE: "hello from a bottom-up Container Instance",
           DURABLE_OBJECT_ID: this.ctx.id.toString(),
+          IMAGE: image,
+          THIS_CTX_CONTAINER_IMAGES: this.ctx.container.images,
         },
       };
       container.start(options);

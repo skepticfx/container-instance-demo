@@ -20,6 +20,7 @@ type handler struct {
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	hostname, _ := os.Hostname()
 	response := map[string]any{
+		"version":           "v1",
 		"name":              os.Getenv("NAME"),
 		"message":           os.Getenv("MESSAGE"),
 		"path":              r.URL.RequestURI(),

@@ -15,13 +15,12 @@ Install dependencies:
 pnpm install
 ```
 
-Use Wrangler's latest `main` preview build.
 
 Authenticate, then deploy with the main preview build:
 
 ```bash
-npx --yes https://pkg.pr.new/wrangler@main whoami
-npx --yes https://pkg.pr.new/wrangler@main deploy
+npx wrangler@4.131.0 whoami
+npx wrangler@4.131.0 deploy
 ```
 
 Wrangler builds and pushes the image, prepares it to run on Cloudflare, uploads the Worker, and creates the namespace-backed application.
@@ -40,7 +39,6 @@ Each `instance` value selects a different Durable Object and container.
 
 ## What changed
 
-- The top-level `containers[]` entry attaches a Durable Object-managed application to the `Sandbox` namespace.
 - `scheduling_policy: "durable_object"` makes each Durable Object own its container lifecycle.
 - The named `images.app` configuration tells Wrangler to build, push, and prepare the image.
-- The Worker prefers `ctx.container.images.app` and falls back to Wrangler's temporary `env.EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES.Sandbox.app` binding while native image metadata rolls out. If neither supplies an image, it reports a configuration error before starting the container.
+- Rollouts work alongside worker's gradual rollouts.
