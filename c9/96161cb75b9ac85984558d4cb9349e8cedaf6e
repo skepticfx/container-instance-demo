@@ -1,0 +1,23 @@
+README.md
+  s_07e59277b8233a::t_1a853bd0cc84c0 22-23,44
+container/main.go
+  s_07e59277b8233a::t_092d1fcc3c70fe 23
+src/index.ts
+  s_07e59277b8233a::t_18115687f80320 41,57-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c996161cb75b9ac85984558d4cb9349e8cedaf6e",
+  "prompts": {},
+  "sessions": {
+    "s_07e59277b8233a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08d80-019c-71f1-bb38-cd0f6ebb37d9",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "skepticfx <ahamed.nafeez@gmail.com>"
+    }
+  }
+}
