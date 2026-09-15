@@ -1,0 +1,27 @@
+README.md
+  s_673db5c5aadda6::t_cbf746cd6cd839 7,10-11,14,18,21-26,28,31-32,35,49,51,53-57
+package.json
+  s_673db5c5aadda6::t_a26c5d3226e1e2 6-8,10-11,13-14,17-19
+pnpm-lock.yaml
+  s_673db5c5aadda6::t_f497bdd630e166 16-17,21-23,27-446,452-459,464-490,496-535,538-819,823-837,842-884,886-932
+src/index.ts
+  s_673db5c5aadda6::t_586c37020a07b1 58
+wrangler.jsonc
+  s_673db5c5aadda6::t_977355c35bf954 2-5,7,9-11,15,17,22-23,26,28,32,35,37-38,40,42,44-50,55-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f4d55f6a54c5cb4e2d3920582051a795dde2d542",
+  "prompts": {},
+  "sessions": {
+    "s_673db5c5aadda6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a66a-bd5d-7222-934d-1c53a8995961",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "skepticfx <ahamed.nafeez@gmail.com>"
+    }
+  }
+}
