@@ -29,7 +29,7 @@ Check your account, then deploy. Run `pnpm exec wrangler login` first if you are
 
 ```bash
 pnpm exec wrangler whoami
-pnpm deploy
+pnpm run deploy
 ```
 
 Wrangler builds and pushes the image, prepares it to run on Cloudflare, uploads the Worker, and creates the namespace-backed application if it is missing. Normal deploys apply explicitly configured application settings; omitted settings are preserved.
