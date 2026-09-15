@@ -19,8 +19,8 @@ pnpm install
 Authenticate, then deploy with the main preview build:
 
 ```bash
-npx wrangler@4.131.0 whoami
-npx wrangler@4.131.0 deploy
+npx wrangler@4.132.0 whoami
+npx wrangler@4.132.0 deploy
 ```
 
 Wrangler builds and pushes the image, prepares it to run on Cloudflare, uploads the Worker, and creates the namespace-backed application.
