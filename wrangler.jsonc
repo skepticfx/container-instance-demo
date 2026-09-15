@@ -1,32 +1,60 @@
 {
+  // Editor autocomplete and validation from the installed Wrangler schema.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+
+  // Name of the Worker deployed to your Cloudflare account.
   "name": "container-instance-demo",
+  // Worker entrypoint, which also exports the Sandbox Durable Object class.
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-17",
+  // Selects runtime compatibility behavior independently of the Wrangler version.
+  "compatibility_date": "2026-09-15",
+
   "durable_objects": {
     "bindings": [
       {
+        // The Worker uses env.SANDBOX to select a Durable Object instance.
         "name": "SANDBOX",
+        // Must match the Durable Object class exported by src/index.ts.
         "class_name": "Sandbox"
       }
     ]
   },
+
+  // Durable Object migration history. Keep this existing entry on redeploys.
   "migrations": [
     {
+      // Identifies this migration in the Worker's deployment history.
       "tag": "v1",
+      // Creates the Sandbox namespace with SQLite-backed storage.
       "new_sqlite_classes": ["Sandbox"]
     }
   ],
+
   "containers": [
     {
+      // Attach this container application to the Sandbox Durable Object class.
       "class_name": "Sandbox",
+      // Each Durable Object starts and manages its own container at runtime.
+      // Instance size, entrypoint, env, and inactivity timeout live in src/index.ts.
       "scheduling_policy": "durable_object",
+      // Named images Wrangler builds, pushes, and prepares for this Worker version.
       "images": {
+        // The Worker reads this image as this.ctx.container.images.app.
         "app": {
-          "dockerfile": "./container/Dockerfile"
+          // Dockerfile path, relative to this Wrangler configuration file.
+          "dockerfile": "./container/Dockerfile",
+          // Docker build context, also relative to this configuration file.
+          // COPY and ADD read files from here; it defaults to the Dockerfile's directory.
+          "build_context": "./container"
+          // Optional build_vars here supplies Docker build arguments; none are needed.
+          // Runtime environment variables are passed to container.start() in the Worker.
         }
       }
     }
   ],
+
+  // Enable Worker observability, including logs from the Worker and its Durable Objects.
+  // Container process logs have a separate containers[].observability setting.
   "observability": {
     "enabled": true
   }

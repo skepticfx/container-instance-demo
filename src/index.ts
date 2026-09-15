@@ -55,7 +55,7 @@ export class Sandbox extends DurableObject<Env> {
           MESSAGE: "hello from a bottom-up Container Instance",
           DURABLE_OBJECT_ID: this.ctx.id.toString(),
           IMAGE: image,
-          THIS_CTX_CONTAINER_IMAGES: JSON.stringify(this.ctx.container.images),
+          THIS_CTX_CONTAINER_IMAGES: JSON.stringify(container.images),
         },
       };
       container.start(options);
